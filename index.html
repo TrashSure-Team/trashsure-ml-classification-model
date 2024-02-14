@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Waste Classification</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background-color: #f0f0f0;
+            }
+            #user-input, button {
+                margin: 10px;
+            }
+            #prediction {
+                font-size: 24px;
+                color: #333;
+            }
+        </style>
+    </head>
+<body>
+    <input id="user-input" type="file" accept="image/*">
+    <button onclick="makePrediction()">Predict</button>
+    <p id="prediction"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script>
+        async function makePrediction() {
+            // 1. Gather user input
+            const imageUpload = document.getElementById('user-input').files[0];
+            const image = await createImageBitmap(imageUpload);
+
+            // 2. Preprocess the input data
+            const inputData = preprocess(image);
+
+            // 3. Load the model
+            const model = await tf.loadLayersModel('./Models/tfjs_model/model.json');
+
+            // 4. Use the model to make a prediction
+            const prediction = model.predict(inputData);
+
+            // 5. Postprocess the prediction
+            const readablePrediction = postprocess(prediction);
+
+            // 6. Display the prediction
+            document.getElementById('prediction').innerHTML = readablePrediction;
+        }
+
+        function preprocess(image) {
+            // Convert the image to a tensor
+            const tensor = tf.browser.fromPixels(image);
+
+            // Resize the image to the size your model expects
+            const resizedImage = tf.image.resizeBilinear(tensor, [128, 128]);
+
+            // Normalize the image to the range [0, 1]
+            const normalizedImage = resizedImage.div(tf.scalar(255));
+
+            // Add a batch dimension
+            const batchedImage = normalizedImage.expandDims(0);
+
+            return batchedImage;
+        }
+
+        function postprocess(prediction) {
+            const classNames = ['Glass', 'Medical', 'Metal', 'Paper', 'Plastic', 'Textiles', 'e-Waste']
+            const predictedClassIndex = prediction.argMax(-1).dataSync()[0];
+            return classNames[predictedClassIndex];
+        }
+    </script>
+</body>
+
+</html>
